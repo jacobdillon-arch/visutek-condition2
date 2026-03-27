@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VisuTek — Condition 2</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --white: #ffffff;
+  --black: #0a0a0a;
+  --grey-02: #f7f7f7;
+  --grey-10: #e2e2e2;
+  --grey-20: #c8c8c8;
+  --grey-50: #7a7a7a;
+  --grey-60: #606060;
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --border: 0.5px solid var(--grey-10);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-body); background: var(--white); color: var(--black); scroll-behavior: smooth; overflow-x: hidden; }
+
+.landing { height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--black); color: var(--white); text-align: center; position: relative; }
+.landing h1 { font-family: var(--font-display); font-size: 64px; letter-spacing: 0.1em; margin-bottom: 16px; }
+.landing p { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.6); margin-bottom: 48px; }
+.landing-nav { display: flex; gap: 24px; margin-top: 32px; }
+.landing-btn { padding: 14px 32px; background: transparent; border: 1px solid rgba(255,255,255,0.3); color: rgba(255,255,255,0.8); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; border-radius: 0; transition: all 0.3s; }
+.landing-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.6); color: var(--white); }
+
+.home-btn { position: fixed; top: 24px; right: 24px; padding: 10px 20px; background: rgba(255,255,255,0.95); border: 1px solid var(--grey-20); color: var(--black); font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; z-index: 1000; transition: all 0.3s; border-radius: 0; }
+.home-btn:hover { background: var(--white); border-color: var(--black); }
+.home-btn.hidden { display: none; }
+
+.product-section { display: none; grid-template-columns: 1fr 400px; min-height: 100vh; border-bottom: 2px solid var(--grey-20); }
+.product-section.visible { display: grid; }
+.product-header { grid-column: 1 / -1; padding: 24px 36px; background: var(--grey-02); border-bottom: var(--border); font-family: var(--font-display); font-size: 20px; letter-spacing: 0.1em; text-transform: uppercase; }
+.viewer-col { background: #f2f2f0; position: relative; display: flex; align-items: center; justify-content: center; }
+.viewer-canvas { width: 100%; height: 100%; cursor: grab; }
+.viewer-canvas:active { cursor: grabbing; }
+.viewer-hint { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--grey-50); background: rgba(255,255,255,0.9); padding: 8px 16px; }
+
+.product-panel { background: var(--white); border-left: var(--border); padding: 48px 36px; overflow-y: auto; }
+.product-name { font-family: var(--font-display); font-size: 32px; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 12px; line-height: 1.2; }
+.product-price { font-size: 24px; font-weight: 500; margin-bottom: 32px; }
+.selector-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--grey-50); margin-bottom: 12px; display: block; margin-top: 24px; }
+.color-options { display: flex; gap: 12px; }
+.color-option { width: 44px; height: 44px; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
+.color-option:hover { transform: scale(1.05); }
+.color-option.active { border-color: var(--black); }
+.size-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+.size-option { padding: 12px; border: var(--border); background: var(--white); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-align: center; cursor: pointer; transition: all 0.2s; }
+.size-option:hover { border-color: var(--black); }
+.size-option.active { background: var(--black); color: var(--white); border-color: var(--black); }
+.specs { margin: 32px 0; padding: 32px 0; border-top: var(--border); border-bottom: var(--border); }
+.spec-row { display: flex; justify-content: space-between; padding: 12px 0; font-size: 13px; border-bottom: 0.5px solid var(--grey-10); }
+.spec-row:last-child { border-bottom: none; }
+.spec-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--grey-50); }
+.add-to-cart { width: 100%; padding: 18px; background: var(--black); color: var(--white); border: none; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; border-radius: 0; }
+.add-to-cart:hover { background: var(--grey-60); }
+
+.details-section { margin-top: 48px; padding-top: 32px; border-top: var(--border); }
+.details-title { font-family: var(--font-display); font-size: 18px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 16px; margin-top: 32px; }
+.details-title:first-child { margin-top: 0; }
+.details-text { font-size: 13px; line-height: 1.7; color: var(--grey-60); margin-bottom: 24px; }
+.details-item { padding: 10px 0; border-bottom: var(--border); font-size: 12px; line-height: 1.6; color: var(--grey-60); }
+.details-item:last-child { border-bottom: none; }
+.details-item-label { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; color: var(--grey-50); display: block; margin-bottom: 4px; }
+
+@media (max-width: 768px) {
+  .product-section { grid-template-columns: 1fr; }
+  .product-panel { border-left: none; border-top: var(--border); }
+  .landing h1 { font-size: 48px; }
+  .landing-nav { flex-direction: column; gap: 12px; width: 100%; max-width: 280px; }
+}
+</style>
+</head>
+<body>
+
+<button class="home-btn hidden" id="homeBtn" onclick="goHome()">← Home</button>
+
+<div class="landing" id="landing">
+  <h1>VISUTEK</h1>
+  <p>Product Visualization Study — Condition 2</p>
+  <div class="landing-nav">
+    <button class="landing-btn" onclick="showProduct('mens')">Shop Men's</button>
+    <button class="landing-btn" onclick="showProduct('womens')">Shop Women's</button>
+  </div>
+</div>
+
+<div class="product-section" id="mens-product">
+  <div class="product-header">Men's Product</div>
+  <div class="viewer-col">
+    <canvas id="canvas-men" class="viewer-canvas"></canvas>
+    <div class="viewer-hint">Drag to Rotate · Scroll to Zoom</div>
+  </div>
+  <div class="product-panel">
+    <h1 class="product-name">Men's Powderverse Pants</h1>
+    <div class="product-price">$300.00</div>
+    
+    <label class="selector-label">Color</label>
+    <div class="color-options" id="mens-colors">
+      <div class="color-option active" style="background:#c9b89a;" data-color="sable" title="Sable"></div>
+      <div class="color-option" style="background:#0a0a0a;" data-color="black" title="Black"></div>
+      <div class="color-option" style="background:#3a4a2e;" data-color="olive" title="Dark Olive"></div>
+    </div>
+    
+    <label class="selector-label">Size</label>
+    <div class="size-options">
+      <button class="size-option">S</button>
+      <button class="size-option active">M</button>
+      <button class="size-option">L</button>
+      <button class="size-option">XL</button>
+      <button class="size-option">XXL</button>
+    </div>
+    
+    <div class="specs">
+      <div class="spec-row">
+        <span class="spec-label">Weight</span>
+        <span>20.5 oz / 581 g</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-label">Waterproofing</span>
+        <span>4/5</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-label">Warmth</span>
+        <span>3/5</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-label">Breathability</span>
+        <span>3/5</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-label">Durability</span>
+        <span>4/5</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-label">Fabric</span>
+        <span>AscentShell™ Dry 2L</span>
+      </div>
+    </div>
+    
+    <button class="add-to-cart">Add to Cart — $300.00</button>
+    
+    <div class="details-section">
+      <h2 class="details-title">Product Details</h2>
+      <p class="details-text">
+        The Powderverse Pant features waterproof and breathable AscentShell™ Dry technology, core-mapped VerticalX™ Eco Insulation, and a fully equipped, resort-ready freeride feature set for bell-to-bell skiing and riding. Designed for deep turns, storm days, and insulated protection from the first chair to the parking lot.
+      </p>
+      
+      <h3 class="details-title">Materials & Construction</h3>
+      <div class="details-item">
+        <span class="details-item-label">Shell</span>
+        bluesign® approved 100% Polyester (55% Recycled) 150D Plain Weave, PU Membrane, 180 G/M2
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Insulation</span>
+        VerticalX Eco™ 100% Polyester (85% Recycled) Insulation (45 G/M2) — Core-mapped to seat only
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Lining</span>
+        bluesign® approved 100% Recycled Polyester 50D Taffeta
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Scuff Guard</span>
+        100% Nylon 420D Oxford
+      </div>
+      
+      <h3 class="details-title">Design Features</h3>
+      <div class="details-item">
+        <span class="details-item-label">Waist & Fit</span>
+        Secure waist with dual snap at fly and adjustable Velcro tabs for micro-adjustments and zipper creep prevention
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Venting</span>
+        YKK® Aquaguard® zip outer thigh vents to easily regulate temperature
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Pockets</span>
+        Dedicated avalanche beacon pocket with clip, plus YKK® Aquaguard® zip thigh pockets
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Mobility</span>
+        Articulated knees for natural movement and secure fit
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Snow Protection</span>
+        Internal snow gaiter with power strap slot
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Durability</span>
+        Reinforced scuff guards to protect against crampons, rocks, and ice
+      </div>
+      
+      <h3 class="details-title">Fit & Care</h3>
+      <div class="details-item">
+        <span class="details-item-label">Fit Type</span>
+        Standard Fit — Classic fit for comfort and ease of movement
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Product ID</span>
+        #322502
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Origin</span>
+        Vietnam
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Guarantee</span>
+        Backed by Outdoor Research's Infinite Guarantee®
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="product-section" id="womens-product">
+  <div class="product-header">Women's Product</div>
+  <div class="viewer-col">
+    <canvas id="canvas-women" class="viewer-canvas"></canvas>
+    <div class="viewer-hint">Drag to Rotate · Scroll to Zoom</div>
+  </div>
+  <div class="product-panel">
+    <h1 class="product-name">Women's Powderverse Pants</h1>
+    <div class="product-price">$300.00</div>
+    
+    <label class="selector-label">Color</label>
+    <div class="color-options" id="womens-colors">
+      <div class="color-option active" style="background:#c9b89a;" data-color="sable" title="Sable"></div>
+      <div class="color-option" style="background:#0a0a0a;" data-color="black" title="Black"></div>
+      <div class="color-option" style="background:#8a9098;" data-color="summit" title="Summit"></div>
+    </div>
+    
+    <label class="selector-label">Size</label>
+    <div class="size-options">
+      <button class="size-option">XS</button>
+      <button class="size-option active">S</button>
+      <button class="size-option">M</button>
+      <button class="size-option">L</button>
+      <button class="size-option">XL</button>
+    </div>
+    
+    <div class="specs">
+      <div class="spec-row">
+        <span class="spec-label">Weight</span>
+        <span>19.2 oz / 544 g</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-label">Waterproofing</span>
+        <span>4/5</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-label">Warmth</span>
+        <span>3/5</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-label">Breathability</span>
+        <span>3/5</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-label">Durability</span>
+        <span>4/5</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-label">Fabric</span>
+        <span>AscentShell™ Dry 2L</span>
+      </div>
+    </div>
+    
+    <button class="add-to-cart">Add to Cart — $300.00</button>
+    
+    <div class="details-section">
+      <h2 class="details-title">Product Details</h2>
+      <p class="details-text">
+        The Women's Powderverse Pant delivers the same waterproof, breathable AscentShell™ Dry protection and targeted warmth as the men's version, mapped perfectly for a woman's build during heavy resort freeride laps.
+      </p>
+      
+      <h3 class="details-title">Materials & Construction</h3>
+      <div class="details-item">
+        <span class="details-item-label">Shell</span>
+        bluesign® approved 2L, 100% Recycled Polyester 75Dx160D Ripstop, PU Membrane, 180 G/M2
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Insulation</span>
+        VerticalX Eco™ 100% Polyester (85% Recycled) Insulation (45 G/M2) — Core-mapped to seat only
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Lining</span>
+        bluesign® approved 100% Recycled Polyester 50D Taffeta
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Scuff Guard</span>
+        100% Nylon 420D Oxford
+      </div>
+      
+      <h3 class="details-title">Design Features</h3>
+      <div class="details-item">
+        <span class="details-item-label">Waist & Fit</span>
+        Secure waist with dual snap at fly and adjustable Velcro tabs for micro-adjustments and zipper creep prevention
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Venting</span>
+        YKK® Aquaguard® zip outer thigh vents to easily regulate temperature
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Pockets</span>
+        Dedicated avalanche beacon pocket with clip, plus YKK® Aquaguard® zip thigh pockets
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Mobility</span>
+        Articulated knees for natural movement and secure fit
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Snow Protection</span>
+        Internal snow gaiter with power strap slot
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Durability</span>
+        Reinforced scuff guards to protect against crampons, rocks, ice
+      </div>
+      
+      <h3 class="details-title">Fit & Care</h3>
+      <div class="details-item">
+        <span class="details-item-label">Fit Type</span>
+        Standard Fit — Classic fit for comfort and ease of movement
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Product ID</span>
+        #322516
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Origin</span>
+        Vietnam
+      </div>
+      <div class="details-item">
+        <span class="details-item-label">Guarantee</span>
+        Backed by Outdoor Research's Infinite Guarantee®
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let mensInitialized = false;
+let womensInitialized = false;
+let mensModel = null;
+let womensModel = null;
+
+const colorMap = {
+  sable: 0xc9b89a,
+  black: 0x0a0a0a,
+  olive: 0x3a4a2e,
+  summit: 0x8a9098
+};
+
+function showProduct(gender) {
+  document.getElementById('landing').style.display = 'none';
+  document.getElementById('homeBtn').classList.remove('hidden');
+  
+  if (gender === 'mens') {
+    document.getElementById('mens-product').classList.add('visible');
+    document.getElementById('womens-product').classList.remove('visible');
+    if (!mensInitialized) {
+      init3D('canvas-men', 'Men_Model_.glb', 'mens');
+      mensInitialized = true;
+    }
+  } else {
+    document.getElementById('womens-product').classList.add('visible');
+    document.getElementById('mens-product').classList.remove('visible');
+    if (!womensInitialized) {
+      init3D('canvas-women', 'Woman_model_.glb', 'womens');
+      womensInitialized = true;
+    }
+  }
+}
+
+function goHome() {
+  document.getElementById('landing').style.display = 'flex';
+  document.getElementById('mens-product').classList.remove('visible');
+  document.getElementById('womens-product').classList.remove('visible');
+  document.getElementById('homeBtn').classList.add('hidden');
+  document.getElementById('landing').scrollIntoView({ behavior: 'smooth' });
+}
+
+function init3D(canvasId, modelPath, gender) {
+  const canvas = document.getElementById(canvasId);
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xf0efec);
+  const cam = new THREE.PerspectiveCamera(32, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
+  cam.position.set(0, 0.2, 8);
+  cam.lookAt(0, 0, 0);
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  
+  const hemi = new THREE.HemisphereLight(0xffffff, 0xcccccc, 0.7);
+  scene.add(hemi);
+  const key = new THREE.DirectionalLight(0xffffff, 0.9);
+  key.position.set(2, 3, 2);
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0xffffff, 0.4);
+  fill.position.set(-2, 1, -2);
+  scene.add(fill);
+  
+  let model, autoSpin = true, spinAngle = 0, isDrag = false, prevX = 0, prevY = 0;
+  let rotX = 0, rotY = 0, targetRotX = 0, targetRotY = 0;
+  
+  const loader = new THREE.GLTFLoader();
+  loader.load(modelPath, (gltf) => {
+    model = gltf.scene;
+    const box = new THREE.Box3().setFromObject(model);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scale = 2.6 / maxDim;
+    
+    model.scale.setScalar(scale);
+    model.position.set(0, -0.3, 0);
+    model.position.sub(center.multiplyScalar(scale));
+    model.position.y = -0.3;
+    
+    scene.add(model);
+    
+    if (gender === 'mens') {
+      mensModel = model;
+    } else {
+      womensModel = model;
+    }
+  });
+  
+  canvas.addEventListener('mousedown', (e) => { isDrag = true; prevX = e.clientX; prevY = e.clientY; autoSpin = false; });
+  canvas.addEventListener('mousemove', (e) => {
+    if (isDrag) {
+      targetRotY += (e.clientX - prevX) * 0.01;
+      targetRotX += (e.clientY - prevY) * 0.01;
+      targetRotX = Math.max(-0.5, Math.min(0.5, targetRotX));
+      prevX = e.clientX; prevY = e.clientY;
+    }
+  });
+  canvas.addEventListener('mouseup', () => isDrag = false);
+  canvas.addEventListener('mouseleave', () => isDrag = false);
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    cam.position.z = Math.max(3.5, Math.min(8, cam.position.z + e.deltaY * 0.002));
+  }, { passive: false });
+  
+  function animate() {
+    requestAnimationFrame(animate);
+    if (autoSpin) { spinAngle += 0.004; targetRotY = spinAngle; }
+    rotX += (targetRotX - rotX) * 0.08;
+    rotY += (targetRotY - rotY) * 0.08;
+    if (model) { model.rotation.x = rotX; model.rotation.y = rotY; }
+    renderer.render(scene, cam);
+  }
+  animate();
+}
+
+function changeColor(modelObj, colorHex) {
+  if (!modelObj) return;
+  modelObj.traverse((child) => {
+    if (child.isMesh && child.material) {
+      if (Array.isArray(child.material)) {
+        child.material.forEach(mat => {
+          mat.color.setHex(colorHex);
+        });
+      } else {
+        child.material.color.setHex(colorHex);
+      }
+    }
+  });
+}
+
+document.getElementById('mens-colors').addEventListener('click', (e) => {
+  if (e.target.classList.contains('color-option')) {
+    document.querySelectorAll('#mens-colors .color-option').forEach(o => o.classList.remove('active'));
+    e.target.classList.add('active');
+    const colorName = e.target.dataset.color;
+    changeColor(mensModel, colorMap[colorName]);
+  }
+});
+
+document.getElementById('womens-colors').addEventListener('click', (e) => {
+  if (e.target.classList.contains('color-option')) {
+    document.querySelectorAll('#womens-colors .color-option').forEach(o => o.classList.remove('active'));
+    e.target.classList.add('active');
+    const colorName = e.target.dataset.color;
+    changeColor(womensModel, colorMap[colorName]);
+  }
+});
+
+document.querySelectorAll('.size-option').forEach(opt => {
+  opt.addEventListener('click', function() {
+    this.parentElement.querySelectorAll('.size-option').forEach(o => o.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+</script>
+
+</body>
+</html>
